@@ -1,4 +1,13 @@
 (function () {
+  const font = 'Poppins, sans-serif';
+
+  function createStyledEl(tag, cssText, html) {
+    const el = document.createElement(tag);
+    el.style.cssText = cssText;
+    if (html) el.innerHTML = html;
+    return el;
+  }
+
   function root(url) {
     try {
       return new URL(url).hostname.replace(/^www\./, '').split('.').slice(-2).join('.');
@@ -14,51 +23,46 @@
     })[m]);
   }
 
-  const panel = document.createElement('div');
-  panel.id = 'pageiq-panel';
-  panel.style.cssText = `
+  const panel = createStyledEl('div', `
     position: fixed; top: 20px; left: 20px;
-    background: #fff; color: #000; font-size: 14px;
+    background: #fff; color: #000; font-size: 13px;
     border: 1px solid #ccc; border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    z-index: 999999; min-width: 400px; max-width: 90vw;
-    font-family: Arial, sans-serif;
-  `;
+    z-index: 999999; min-width: 420px; max-width: 90vw;
+    font-family: ${font}; line-height: 1.5;
+  `);
 
-  const header = document.createElement('div');
-  header.style.cssText = `
-    background: #333; color: #fff; padding: 10px;
+  const header = createStyledEl('div', `
+    background: #000; color: #fff; padding: 10px;
     cursor: move; font-weight: bold; user-select: none;
     display: flex; justify-content: space-between; align-items: center;
-  `;
-  const titleSpan = document.createElement('span');
-  titleSpan.textContent = 'RankBrain: PageIQ';
+  `);
 
-  const controls = document.createElement('div');
-  controls.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-left: auto;';
+  const titleSpan = createStyledEl('span', 'font-size: 14px;', 'RankBrain: PageIQ');
 
-  const highlightToggle = document.createElement('input');
-  highlightToggle.type = 'checkbox';
-  highlightToggle.checked = true;
-  highlightToggle.title = 'Toggle link highlighting';
-  highlightToggle.style.cursor = 'pointer';
+  const controls = createStyledEl('div', 'display: flex; gap: 10px; align-items: center; margin-left: auto;');
 
-  const toggleLabel = document.createElement('label');
-  toggleLabel.textContent = 'Highlight';
-  toggleLabel.style.fontSize = '12px';
-  toggleLabel.style.color = '#fff';
-  toggleLabel.style.cursor = 'pointer';
-  toggleLabel.appendChild(highlightToggle);
-  controls.appendChild(toggleLabel);
+  function createToggle(labelText, defaultState) {
+    const label = createStyledEl('label', `
+      font-size: 12px; color: #fff; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    `);
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = defaultState;
+    input.style.cursor = 'pointer';
+    label.appendChild(document.createTextNode(labelText));
+    label.insertBefore(input, label.firstChild);
+    return { label, input };
+  }
 
-  const sidebarToggle = document.createElement('button');
-  sidebarToggle.textContent = '🧭 Sidebar';
-  sidebarToggle.style.cssText = 'font-size: 12px; padding: 4px 8px; cursor: pointer;';
-  controls.appendChild(sidebarToggle);
+  const highlight = createToggle('Highlight', true);
+  controls.appendChild(highlight.label);
 
-  const closeBtn = document.createElement('span');
-  closeBtn.textContent = '✕';
-  closeBtn.style.cssText = 'cursor: pointer;';
+  const sidebar = createToggle('Sidebar', false);
+  controls.appendChild(sidebar.label);
+
+  const closeBtn = createStyledEl('span', 'cursor: pointer;', '✕');
   closeBtn.onclick = e => { e.stopPropagation(); panel.remove(); };
   controls.appendChild(closeBtn);
 
@@ -66,12 +70,12 @@
   header.appendChild(controls);
   panel.appendChild(header);
 
-  const content = document.createElement('div');
-  content.style.padding = '10px';
+  const content = createStyledEl('div', 'padding: 10px;');
 
-  // Robots, Meta & Canonical (Always visible)
+  // Section: Robots, Meta & Canonical
   const robotsMeta = [...document.querySelectorAll('meta[name="robots"], meta[name="googlebot"]')];
-  let robotsHtml = '';
+  let robotsHtml = '<h3 style="font-size:14px;margin-bottom:6px;">Robots, Meta & Canonical</h3>';
+
   robotsMeta.forEach(meta => {
     const name = meta.getAttribute('name');
     const val = meta.getAttribute('content');
@@ -79,28 +83,30 @@
   });
 
   const canonical = document.querySelector('link[rel="canonical"]');
-  const pageTitle = document.title || '';
-  const metaCanonical = canonical ? `<p><strong>Canonical:</strong> <a href="${canonical.href}" target="_blank">${canonical.href}</a></p>` : '<p>No canonical tag found.</p>';
-  const metaTitle = `<p><strong>Title:</strong> ${escapeHTML(pageTitle)}</p>`;
+  const metaTitle = `<p><strong>Title:</strong> ${escapeHTML(document.title)}</p>`;
+  const metaCanonical = canonical
+    ? `<p><strong>Canonical:</strong> <a href="${canonical.href}" target="_blank">${canonical.href}</a></p>`
+    : '<p>No canonical tag found.</p>';
 
-  const robotsDiv = document.createElement('div');
-  robotsDiv.innerHTML = `<h3 style="margin-bottom:8px;">🤖 Robots, Meta & Canonical</h3>${robotsHtml}${metaCanonical}${metaTitle}<div id="robots-check-status">Checking robots.txt…</div>`;
-  content.appendChild(robotsDiv);
+  robotsHtml += metaCanonical + metaTitle;
+  robotsHtml += `<div id="robots-check-status" style="margin-top:6px;">Checking robots.txt…</div>`;
+  robotsHtml += `<button id="open-robots" style="margin-top:6px;padding:4px 8px;font-size:12px;cursor:pointer;">Open robots.txt</button>`;
 
-  // Robots.txt fetch and crawl check
+  const robotsSection = createStyledEl('div', '', robotsHtml);
+  content.appendChild(robotsSection);
+
+  document.body.appendChild(panel);
+
   fetch(location.origin + '/robots.txt')
     .then(res => res.ok ? res.text() : '')
     .then(text => {
       const lines = text.split('\n').map(l => l.trim());
-      let disallows = [];
-      let isMatch = false;
-      let userAgentBlock = false;
-      let currentUserAgent = null;
+      let disallows = [], isMatch = false, userAgentBlock = false, currentAgent = null;
 
       lines.forEach(line => {
         if (line.toLowerCase().startsWith('user-agent:')) {
-          currentUserAgent = line.split(':')[1].trim();
-          userAgentBlock = currentUserAgent === '*' || currentUserAgent.toLowerCase() === 'googlebot';
+          currentAgent = line.split(':')[1].trim().toLowerCase();
+          userAgentBlock = ['*', 'googlebot'].includes(currentAgent);
         }
         if (userAgentBlock && line.toLowerCase().startsWith('disallow:')) {
           const path = line.split(':')[1].trim();
@@ -116,70 +122,74 @@
       document.getElementById('robots-check-status').innerHTML = msg;
     })
     .catch(() => {
-      document.getElementById('robots-check-status').textContent = '⚠️ Could not fetch robots.txt';
+      document.getElementById('robots-check-status').innerHTML = '⚠️ Could not fetch robots.txt';
     });
 
-  // Rel-type link auditing
-  function relInfo() {
-    const allLinks = [...document.querySelectorAll('a[href^="http"]')];
-    const headerLinks = document.querySelectorAll('header a, footer a');
-    const headerFooterSet = new Set([...headerLinks].map(a => a.href));
-    const currentRoot = root(location.href);
+  document.getElementById('open-robots').onclick = () => {
+    window.open(location.origin + '/robots.txt', '_blank');
+  };
 
-    const externalLinks = [];
-    let internalCount = 0;
-    const relCounts = { sponsored: 0, nofollow: 0, ugc: 0, follow: 0 };
+  function addAccordion(title, html, open = false) {
+    const section = document.createElement('div');
+    const heading = createStyledEl('div', `
+      background: #eee; padding: 8px 10px; font-weight: bold;
+      cursor: pointer; border-top: 1px solid #ccc; font-size: 14px;
+    `, title);
 
-    allLinks.forEach(link => {
-      const href = link.href;
-      const rel = (link.getAttribute('rel') || '').toLowerCase();
-      const linkRoot = root(href);
+    const body = createStyledEl('div', `
+      padding: 8px 10px; font-size: 13px; display: ${open ? 'block' : 'none'};
+    `, html);
 
-      if (!headerFooterSet.has(href) && linkRoot !== currentRoot) {
-        externalLinks.push([link.textContent.trim() || '[no text]', href]);
-      }
+    heading.onclick = () => {
+      body.style.display = body.style.display === 'none' ? 'block' : 'none';
+    };
 
-      if (linkRoot === currentRoot) internalCount++;
-
-      if (rel.includes('sponsored')) relCounts.sponsored++;
-      else if (rel.includes('nofollow')) relCounts.nofollow++;
-      else if (rel.includes('ugc')) relCounts.ugc++;
-      else relCounts.follow++;
-    });
-
-    return { allLinks, externalLinks, internalCount, relCounts };
+    section.appendChild(heading);
+    section.appendChild(body);
+    content.appendChild(section);
   }
 
-  const { allLinks, externalLinks, internalCount, relCounts } = relInfo();
+  const allLinks = [...document.querySelectorAll('a[href^="http"]')];
+  const headerLinks = document.querySelectorAll('header a, footer a');
+  const headerFooterSet = new Set([...headerLinks].map(a => a.href));
+  const currentRoot = root(location.href);
+  const externalLinks = [];
+  let internalCount = 0;
+  const relCounts = { sponsored: 0, nofollow: 0, ugc: 0, follow: 0 };
 
-  const externalHtml = externalLinks.length
-    ? '<table style="border-collapse:collapse;width:100%;">' +
-      '<tr><th style="border:1px solid #ccc;padding:4px;">Anchor</th><th style="border:1px solid #ccc;padding:4px;">URL</th></tr>' +
+  allLinks.forEach(link => {
+    const href = link.href;
+    const rel = (link.getAttribute('rel') || '').toLowerCase();
+    const linkRoot = root(href);
+    if (!headerFooterSet.has(href) && linkRoot !== currentRoot)
+      externalLinks.push([link.textContent.trim() || '[no text]', href]);
+    if (linkRoot === currentRoot) internalCount++;
+    if (rel.includes('sponsored')) relCounts.sponsored++;
+    else if (rel.includes('nofollow')) relCounts.nofollow++;
+    else if (rel.includes('ugc')) relCounts.ugc++;
+    else relCounts.follow++;
+  });
+
+  const extHtml = externalLinks.length
+    ? '<table style="border-collapse:collapse;width:100%;"><tr><th style="border:1px solid #ccc;padding:4px;">Anchor</th><th style="border:1px solid #ccc;padding:4px;">URL</th></tr>' +
       externalLinks.map(([t, h]) =>
         `<tr><td style="border:1px solid #ccc;padding:4px;">${escapeHTML(t)}</td><td style="border:1px solid #ccc;padding:4px;"><a href="${h}" target="_blank">${h}</a></td></tr>`
-      ).join('') + '</table>'
-    : '<p>No external links found (excluding header/footer).</p>';
-
-  const internalHtml = `<p>${internalCount} internal links to the same root domain.</p>`;
+      ).join('') + '</table>' : '<p>No external links found (excluding header/footer).</p>';
+  const intHtml = `<p>${internalCount} internal links to the same root domain.</p>`;
   const relHtml = `
-    <ul style="padding-left: 20px; margin: 0;">
+    <ul style="padding-left: 20px; margin: 0; font-size:13px;">
       <li><strong>Sponsored:</strong> ${relCounts.sponsored}</li>
       <li><strong>Nofollow:</strong> ${relCounts.nofollow}</li>
       <li><strong>UGC:</strong> ${relCounts.ugc}</li>
       <li><strong>Follow / Normal:</strong> ${relCounts.follow}</li>
     </ul>`;
 
-  function addSection(title, html) {
-    const section = document.createElement('div');
-    section.innerHTML = `<h3 style="margin-top:16px;">${title}</h3>${html}`;
-    content.appendChild(section);
-  }
+  addAccordion('External Links (Body Only)', extHtml);
+  addAccordion('Internal Link Count', intHtml);
+  addAccordion('Link Counts by rel Type', relHtml);
 
-  addSection('🌍 External Links (Body Only)', externalHtml);
-  addSection('🏠 Internal Link Count', internalHtml);
-  addSection('🔢 Link Counts by rel Type', relHtml);
+  panel.appendChild(content);
 
-  // Link highlighting
   function updateHighlights(on) {
     allLinks.forEach(link => {
       const rel = (link.getAttribute('rel') || '').toLowerCase();
@@ -202,13 +212,12 @@
     });
   }
 
-  highlightToggle.addEventListener('change', () => updateHighlights(highlightToggle.checked));
+  highlight.input.addEventListener('change', () => updateHighlights(highlight.input.checked));
   updateHighlights(true);
 
-  // Sidebar toggle
   let isSidebar = false;
-  sidebarToggle.onclick = function () {
-    isSidebar = !isSidebar;
+  sidebar.input.addEventListener('change', () => {
+    isSidebar = sidebar.input.checked;
     if (isSidebar) {
       panel.style.top = '0px';
       panel.style.left = 'unset';
@@ -224,12 +233,8 @@
       panel.style.width = '';
       panel.style.borderRadius = '6px';
     }
-  };
+  });
 
-  panel.appendChild(content);
-  document.body.appendChild(panel);
-
-  // Dragging
   let isDragging = false, offsetX = 0, offsetY = 0;
   header.addEventListener('mousedown', function (e) {
     if (isSidebar) return;
