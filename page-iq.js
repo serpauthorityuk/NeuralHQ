@@ -18,6 +18,17 @@
     z-index: 999999; min-width: 400px; max-width: 90vw;
   `;
 
+  const style = document.createElement('style');
+  style.textContent = `
+    #pageiq-panel * {
+      color: #000 !important;
+    }
+    #pageiq-panel a {
+      color: #00f !important;
+    }
+  `;
+  document.head.appendChild(style);
+
   const header = document.createElement('div');
   header.style.cssText = `
     background: #333; color: #fff; padding: 10px;
@@ -66,7 +77,7 @@
   const content = document.createElement('div');
   content.style.padding = '10px';
 
-  // Robots, Meta & Canonical (Always visible)
+  // Robots, Meta & Canonical (without heading)
   const metaTags = document.querySelectorAll('meta[name="robots"], meta[name="googlebot"]');
   const canonical = document.querySelector('link[rel="canonical"]');
   const pageTitle = document.title || '';
@@ -78,16 +89,21 @@
     robotsHtml += `<p><strong>${name}:</strong> ${val}</p>`;
   });
 
-  robotsHtml += canonical
-    ? `<p><strong>Canonical:</strong> <a href="${canonical.href}" target="_blank">${canonical.href}</a></p>`
-    : '<p>No canonical tag found.</p>';
+  if (canonical && canonical.href !== window.location.href) {
+    robotsHtml += `<p><strong>Canonical:</strong> <a href="${canonical.href}" target="_blank">${canonical.href}</a></p>`;
+  } else if (canonical) {
+    robotsHtml += `<p><strong>Canonical:</strong> Self-referencing canonical URL</p>`;
+  } else {
+    robotsHtml += '<p>No canonical tag found.</p>';
+  }
 
-  robotsHtml += `<p><strong>Title:</strong> ${pageTitle}</p>`;
   robotsHtml += `<div id="robots-check-status">Checking robots.txt…</div>`;
 
   const robotsSection = document.createElement('div');
-  robotsSection.innerHTML = `<h3 style="font-size:14px;font-weight:bold;">Robots, Meta & Canonical</h3>${robotsHtml}`;
+  robotsSection.style.color = '#000';
+  robotsSection.innerHTML = robotsHtml;
   content.appendChild(robotsSection);
+  content.appendChild(document.createElement('br'));
 
   // Fetch robots.txt
   fetch(location.origin + '/robots.txt')
@@ -157,7 +173,7 @@
   });
 
   const externalHtml = externalLinks.length
-    ? '<table style="border-collapse:collapse;width:100%;font-size:13px;">' +
+    ? '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
       '<tr><th style="border:1px solid #ccc;padding:4px;">Anchor</th><th style="border:1px solid #ccc;padding:4px;">URL</th></tr>' +
       externalLinks.map(([t, h]) =>
         `<tr><td style="border:1px solid #ccc;padding:4px;">${t}</td><td style="border:1px solid #ccc;padding:4px;"><a href="${h}" target="_blank">${h}</a></td></tr>`
@@ -166,7 +182,7 @@
 
   const internalHtml = `<p>${internalCount} internal links to the same root domain.</p>`;
   const relHtml = `
-    <ul style="padding-left: 20px; margin: 0; font-size:13px;">
+    <ul style="padding-left: 20px; margin: 0; font-size:14px;">
       <li><strong>Sponsored:</strong> ${relCounts.sponsored}</li>
       <li><strong>Nofollow:</strong> ${relCounts.nofollow}</li>
       <li><strong>UGC:</strong> ${relCounts.ugc}</li>
